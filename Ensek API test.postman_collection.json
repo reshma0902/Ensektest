@@ -1,0 +1,589 @@
+{
+	"info": {
+		"_postman_id": "87511d6a-5815-4578-9f6d-a76c6c3722e4",
+		"name": "Ensek API test",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Buy Fuel",
+			"item": [
+				{
+					"name": "List EnergyID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"\r",
+									"//Validate the status of the response\r",
+									"\r",
+									"pm.test('The Energy details with available quantity of units are retrieved successfully',function(){\r",
+									"        pm.response.to.have.status(200)\r",
+									"    });\r",
+									"\r",
+									"\r",
+									"\r",
+									"var jsonData = pm.response.json();\r",
+									"\r",
+									"const enid=[];\r",
+									"const qty=[];\r",
+									" //Getting available energy id with more than 1 quantity \r",
+									"_.each(jsonData, (item)=>{\r",
+									"    if(item.quantity_of_units !=0){\r",
+									"        enid.push(item.energy_id);\r",
+									"        qty.push(item.quantity_of_units);\r",
+									"        console.log(\"Energy ID:   \",item.energy_id, \"Remaining Units:   \",item.quantity_of_units);\r",
+									"        \r",
+									"        pm.test(\"Energy ID:   \" + item.energy_id +\" Remaining Units:   \"+ item.quantity_of_units, function () {\r",
+									"          var jsonData = pm.response.json();\r",
+									"        pm.expect( pm.response.to.have.status(200));\r",
+									"    });\r",
+									"    }\r",
+									"\r",
+									"})\r",
+									"pm.globals.set('energyID', JSON.stringify(enid));\r",
+									"pm.globals.set('quantity', JSON.stringify(qty));\r",
+									"\r",
+									"\r",
+									"\r",
+									"//Test response time\r",
+									"pm.test(\"Response time is less than 500ms\", () => {\r",
+									"  pm.expect(pm.response.responseTime).to.be.below(500);\r",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "https://ensekapicandidatetest.azurewebsites.net/energy",
+							"protocol": "https",
+							"host": [
+								"ensekapicandidatetest",
+								"azurewebsites",
+								"net"
+							],
+							"path": [
+								"energy"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "BuyFuel Success",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// en=pm.globals.get(\"energyID\");\r",
+									"\r",
+									"// console.log(en);\r",
+									"// const enid=Array.from(en);\r",
+									"// console.log(enid);\r",
+									"\r",
+									"var resp1;\r",
+									"//Get List of Energy ID to validate\r",
+									"pm.sendRequest(\"https://ensekapicandidatetest.azurewebsites.net/energy\", function (err, response) {\r",
+									"      resp1 = response.json();\r",
+									"      pm.globals.set(\"getjsonData\", resp1);\r",
+									"});\r",
+									"console.log(pm.globals.get(\"getjsonData\"))\r",
+									"\r",
+									""
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"//Testing for Valid data\r",
+									"//Upload all data using ValidData.csv   \r",
+									"\r",
+									"if(pm.response.to.have.status(200)){\r",
+									"    pm.test('The application should be able to buy the fuel successfully',function(){\r",
+									"        pm.response.to.have.status(200)\r",
+									"    })\r",
+									"}\r",
+									"\r",
+									"\r",
+									"\r",
+									"// Get Response Message\r",
+									"var jsonData = pm.response.json();\r",
+									"\r",
+									"\r",
+									"\r",
+									"var resp2=pm.globals.get(\"getjsonData\");\r",
+									"\r",
+									"\r",
+									"\r",
+									"//Validate all the data in the Response Message is getting displayed correctly\r",
+									"\r",
+									"_.each(resp2, (item) => {\r",
+									"\r",
+									"   if(pm.iterationData.get(\"energyID\") == item.energy_id ){\r",
+									"\r",
+									"        //Verify message contains correct Unit type\r",
+									"        pm.test(\"Unit type is displayed correctly\", function () {\r",
+									"        pm.expect(pm.response.text()).to.include(item.unit_type);     \r",
+									"        });\r",
+									"\r",
+									"        //Verify message contains correct cost\r",
+									"        pm.test(\"Correct Price per unit is displayed\", function () {\r",
+									"        pm.expect(pm.response.text()).to.include(\"at a cost of \"+item.price_per_unit);     \r",
+									"        });\r",
+									"\r",
+									"        //Verify the total quantity is displayed correctly\r",
+									"        var qty=item.price_per_unit * pm.iterationData.get(\"quantity\");\r",
+									"        console.log(\"Total Purchased quantity: \"+ qty);\r",
+									"        pm.test(\"Expected Total Purchased quantity: \"+ qty, function () {\r",
+									"        pm.expect(pm.response.text()).to.include(\"You have purchased \"+qty+ \" \"+item.unit_type);     \r",
+									"        });\r",
+									"\r",
+									"        //Verify the units remaining\r",
+									"        var urem=item.quantity_of_units - pm.iterationData.get(\"quantity\");\r",
+									"        pm.test(\"Expected Remaining Units: \"+ urem, function () {\r",
+									"        pm.expect(pm.response.text()).to.include(\"there are \"+urem+ \" units remaining. \");     \r",
+									"        });\r",
+									"\r",
+									"        //Verify the order id length\r",
+									"        let searchIndex = jsonData.message.indexOf(\"Your order\");\r",
+									"        let idIndex= searchIndex+17;\r",
+									"        var ordid=jsonData.message.slice(idIndex)\r",
+									"        pm.test(\"Expected Order id length is 36: \"+ ordid, function () {\r",
+									"            pm.expect(ordid.length-1).to.be.eql(36);\r",
+									"\r",
+									"\r",
+									"        });\r",
+									"\r",
+									"        //Adding order id to global variable\r",
+									"\r",
+									"        pm.globals.set(\"order_id\", ordid.slice(0, -1));\r",
+									"    \r",
+									"\r",
+									"\r",
+									"\r",
+									"    }\r",
+									"});\r",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://ensekapicandidatetest.azurewebsites.net/buy/{{energyID}}/{{quantity}}",
+							"protocol": "https",
+							"host": [
+								"ensekapicandidatetest",
+								"azurewebsites",
+								"net"
+							],
+							"path": [
+								"buy",
+								"{{energyID}}",
+								"{{quantity}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "BuyFuel_NoUnitsAvailable",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// en=pm.globals.get(\"energyID\");\r",
+									"\r",
+									"// console.log(en);\r",
+									"// const enid=Array.from(en);\r",
+									"// console.log(enid);\r",
+									"\r",
+									"var resp1;\r",
+									"//Get List of Energy ID to validate\r",
+									"pm.sendRequest(\"https://ensekapicandidatetest.azurewebsites.net/energy\", function (err, response) {\r",
+									"      resp1 = response.json();\r",
+									"      pm.globals.set(\"getjsonData\", resp1);\r",
+									"});\r",
+									"console.log(pm.globals.get(\"getjsonData\"))\r",
+									"\r",
+									""
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"//Testing for Valid data\r",
+									"//Upload data which has 0 units remaining using ValidData.csv   \r",
+									"\r",
+									"if(pm.response.to.have.status(200)){\r",
+									"    pm.test('The application should be able to buy the fuel successfully',function(){\r",
+									"        pm.response.to.have.status(200)\r",
+									"    })\r",
+									"}\r",
+									"\r",
+									"\r",
+									"\r",
+									"// Get Response Message\r",
+									"var jsonData = pm.response.json();\r",
+									"\r",
+									"\r",
+									"var resp2=pm.globals.get(\"getjsonData\");\r",
+									"\r",
+									"\r",
+									"\r",
+									"//Validate all the data in the Response Message is getting displayed correctly\r",
+									"\r",
+									"_.each(resp2, (item) => {\r",
+									"\r",
+									"    if (pm.globals.get(\"energyID\")== item.energy_id && item.quantity_of_units == 0) {\r",
+									"\r",
+									"        //Verify the appropriate error message\r",
+									"\r",
+									"        pm.test(\"No units available, Appropriate error message is displayed\", function () {\r",
+									"            pm.expect(pm.response.text()).to.include(\"There is no\");\r",
+									"            pm.expect(pm.response.text()).to.include(\"fuel to purchase!\");\r",
+									"        });\r",
+									"    }\r",
+									"\r",
+									"});\r",
+									"\r",
+									"\r",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://ensekapicandidatetest.azurewebsites.net/buy/{{energyID}}/{{quantity}}",
+							"protocol": "https",
+							"host": [
+								"ensekapicandidatetest",
+								"azurewebsites",
+								"net"
+							],
+							"path": [
+								"buy",
+								"{{energyID}}",
+								"{{quantity}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "OrderListCheck",
+			"item": [
+				{
+					"name": "List Order",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"//Verify that each order from the previous step is returned in the /orders list with the expected details\r",
+									"\r",
+									"// Get Response Message\r",
+									"var jsonData = pm.response.json();\r",
+									"\r",
+									"const oid = pm.globals.get(\"order_id\");\r",
+									"\r",
+									"        pm.test(\"Verify the order id \"+ oid +\" is available\", function () {\r",
+									"        pm.expect(pm.response.text()).to.include(oid);\r",
+									"    });\r",
+									"   \r",
+									"\r",
+									"\r",
+									"    \r",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "https://ensekapicandidatetest.azurewebsites.net/orders",
+							"protocol": "https",
+							"host": [
+								"ensekapicandidatetest",
+								"azurewebsites",
+								"net"
+							],
+							"path": [
+								"orders"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Order Count",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"//Confirm how many orders were created before the current date\r",
+									"let date = new Date();\r",
+									"day = date.getDate();\r",
+									"month = date.getMonth();\r",
+									"year = date.getFullYear();\r",
+									"months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];\r",
+									"var currentdate = day + ' ' + months[month] + ' ' + year;\r",
+									"// console.log(Date.parse(currentdate));\r",
+									"\r",
+									"// Get Response Message\r",
+									"var jsonData = pm.response.json();\r",
+									"var getdate;\r",
+									"var count=0;\r",
+									"//Get count of orders created before currentdate\r",
+									"_.each(jsonData, (item) => {\r",
+									"    getdate=Date.parse(item.time.substring(5,16));\r",
+									"    // console.log(Date.parse(getdate));\r",
+									"    if(getdate<Date.parse(currentdate)){\r",
+									"        count++;\r",
+									"    }\r",
+									"\r",
+									"});\r",
+									"console.log(count);\r",
+									"pm.test(\"Total Orders before current date : \" +count +\" as expected\" , () => {\r",
+									"  pm.expect(count).to.be.greaterThan(0);\r",
+									"});\r",
+									"\r",
+									"pm.test(\"Retrieved total count successfully\", function () {\r",
+									"    pm.expect(pm.response.code).to.be.eql(200);\r",
+									"});\r",
+									"\r",
+									"\r",
+									"\r",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "https://ensekapicandidatetest.azurewebsites.net/orders",
+							"protocol": "https",
+							"host": [
+								"ensekapicandidatetest",
+								"azurewebsites",
+								"net"
+							],
+							"path": [
+								"orders"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "BuyFuelInvalid data",
+			"item": [
+				{
+					"name": "BuyFuel InvalidData",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"//Testing for Invalid data\r",
+									"//Upload all data using InvalidData.csv   \r",
+									"\r",
+									"pm.test('Bad Request for Invalid data',function(){\r",
+									"    pm.expect(pm.response.code).to.be.oneOf([400,404])\r",
+									"    })\r",
+									"\r",
+									"\r",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://ensekapicandidatetest.azurewebsites.net/buy/{{energyID}}/{{quantity}}",
+							"protocol": "https",
+							"host": [
+								"ensekapicandidatetest",
+								"azurewebsites",
+								"net"
+							],
+							"path": [
+								"buy",
+								"{{energyID}}",
+								"{{quantity}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Generic",
+			"item": [
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"\r",
+									"var jsonData = pm.response.json();\r",
+									"\r",
+									"//Verifying all different responses\r",
+									"pm.test(\"Successful Login\", function () {\r",
+									"    pm.expect(pm.response.code).to.eql(200);\r",
+									"});\r",
+									"\r",
+									"pm.test(\"500- Internal Server Error\", function () {\r",
+									"    pm.expect(pm.response.code).to.eql(500);\r",
+									"    pm.expect(jsonData.message.toLowerCase()).to.eql(\"internal server error\");\r",
+									"});\r",
+									"\r",
+									"pm.test(\"Unsuccessful login \", function () {\r",
+									"    pm.expect(pm.response.code).to.be.oneOf([400,401]);\r",
+									"});\r",
+									"\r",
+									"\r",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"username\": \"{{username}}\",\r\n  \"password\": \"{{password}}\"\r\n}"
+						},
+						"url": {
+							"raw": "https://ensekapicandidatetest.azurewebsites.net/login",
+							"protocol": "https",
+							"host": [
+								"ensekapicandidatetest",
+								"azurewebsites",
+								"net"
+							],
+							"path": [
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "ResetReq",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"//Verifying all different responses\r",
+									"pm.test(\"Successful Login\", function () {\r",
+									"    pm.expect(pm.response.code).to.eql(200);\r",
+									"});\r",
+									"pm.test(\"Unsuccessful login \", function () {\r",
+									"    pm.expect(pm.response.code).to.be.oneOf([400,401]);\r",
+									"});\r",
+									"\r",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "https://ensekapicandidatetest.azurewebsites.net/reset",
+							"protocol": "https",
+							"host": [
+								"ensekapicandidatetest",
+								"azurewebsites",
+								"net"
+							],
+							"path": [
+								"reset"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}

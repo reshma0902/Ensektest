@@ -1,0 +1,4 @@
+﻿energyID,quantity,testKey,tc_id
+7,1,Invalid data,
+8,1,Invalid data,
+-1,1,Negative data,
